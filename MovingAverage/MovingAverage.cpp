@@ -76,8 +76,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 int MovingAverage(char *filename, int M) {
 
-	int i, j, k;
+	int i, j, k, flag;
 	int RecordNum;
+	int id[MAXRECORDS];
 	double x[MAXRECORDS][20], y[MAXRECORDS][20], z[MAXRECORDS][20];
 	double averageX, averageY, averageZ;
 	char header1[256], header2[256];
@@ -92,15 +93,27 @@ int MovingAverage(char *filename, int M) {
 	/* 全てのデータを読み込んで配列に格納 */
 	j = 0;
 	i = 0;
+	flag = 0;
 	fscanf(fp, "%s", header1);
 	fscanf(fp, "%s", header2);
-	while ( fscanf(fp, "%lf,%lf,%lf,", &x[i][j], &y[i][j], &z[i][j]) != EOF) {
 
-		if (j == 19) {
+	while (flag == 0) {
+
+		/* idの読み込み */
+		if (j == 0) {
+
+			/* idが読み込めなかったら終了 */
+			if (fscanf(fp, "%d,", &id[i]) == EOF) flag = 1;
+			j++;
+
+		}
+		/* １行全部読み込んだらiをインクリメント */
+		else if (j == 21) {
 			j = 0;
 			i++;
 		}
 		else {
+			fscanf(fp, "%lf,%lf,%lf,", &x[i][j-1], &y[i][j-1], &z[i][j-1]);
 			j++;
 		}
 
@@ -116,35 +129,42 @@ int MovingAverage(char *filename, int M) {
 
 
 	for (i = 0; i < RecordNum; i++) {
-		for (j = 0; j < 20; j++) {
+		for (j = 0; j < 22; j++) {
 
-			if (j != 0) fprintf(fp, ",");
-
-			/* 平均を出せない最初のレコード */
-			if (i < M / 2) {
-				fprintf(fp, "%lf,%lf,%lf", x[i][j], y[i][j], z[i][j]);
+			if (j == 0) {
+				fprintf(fp, "%d", id[i]);
 			}
 
-			/* 平均を出せない最後のレコード */
-			else if (i >= RecordNum - M / 2) {
-				fprintf(fp, "%lf,%lf,%lf", x[i][j], y[i][j], z[i][j]);
+			else if (j == 21) {
+				fprintf(fp, "\n");
 			}
-
-			/* calculate average and save */
 			else {
-				averageX = averageY = averageZ = 0;
-				for (k = -(M / 2); k <= (M / 2); k++) {
-					averageX += x[i + k][j];
-					averageY += y[i + k][j];
-					averageZ += z[i + k][j];
+
+				/* 平均を出せない最初のレコード */
+				if (i < M / 2) {
+					fprintf(fp, ",%lf,%lf,%lf", x[i][j-1], y[i][j-1], z[i][j-1]);
 				}
-				averageX = averageX / M;
-				averageY = averageY / M;
-				averageZ = averageZ / M;
-				fprintf(fp, "%lf,%lf,%lf", averageX, averageY, averageZ);
+
+				/* 平均を出せない最後のレコード */
+				else if (i >= RecordNum - M / 2) {
+					fprintf(fp, ",%lf,%lf,%lf", x[i][j-1], y[i][j-1], z[i][j-1]);
+				}
+
+				/* calculate average and save */
+				else {
+					averageX = averageY = averageZ = 0;
+					for (k = -(M / 2); k <= (M / 2); k++) {
+						averageX += x[i + k][j-1];
+						averageY += y[i + k][j-1];
+						averageZ += z[i + k][j-1];
+					}
+					averageX = averageX / M;
+					averageY = averageY / M;
+					averageZ = averageZ / M;
+					fprintf(fp, ",%lf,%lf,%lf", averageX, averageY, averageZ);
+				}
 			}
 
-			if (j == 19) fprintf(fp, "\n");
 		}
 	}
 
